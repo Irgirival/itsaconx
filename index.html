@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Project Tracker</title>
+<style>
+  :root{
+    --navy:#0d1b42;
+    --navy-2:#16285c;
+    --blue:#2f6fed;
+    --green:#1aa052;
+    --orange:#f5a623;
+    --grey:#cfd4dc;
+    --bg:#f4f6fb;
+    --card:#ffffff;
+    --text:#1c2438;
+    --muted:#7a839c;
+    --border:#e4e8f0;
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:inherit; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1500px; margin:0 auto; padding:18px;}
+
+  /* HEADER */
+  .header{
+    background:linear-gradient(135deg,var(--navy) 0%, var(--navy-2) 100%);
+    border-radius:16px; padding:20px 28px; color:#fff;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;
+    margin-bottom:16px;
+  }
+  .header-left{display:flex; align-items:center; gap:14px;}
+  .logo{
+    width:50px;height:50px;border-radius:12px;background:rgba(255,255,255,0.12);
+    display:flex;align-items:center;justify-content:center;font-size:24px;
+  }
+  .header-left h1{font-size:13px; letter-spacing:1px; margin:0; font-weight:700; opacity:0.85;}
+  .header-mid h2{font-size:24px; margin:0 0 4px; font-weight:800; letter-spacing:0.5px;}
+  .header-mid p{margin:0; font-size:14px; opacity:0.85;}
+  .period-pill{
+    display:inline-flex; align-items:center; gap:8px; margin-top:10px;
+    background:rgba(255,255,255,0.10); padding:6px 14px; border-radius:999px; font-size:13px;
+  }
+  .period-pill input{
+    background:transparent; border:none; color:#fff; font-size:13px; font-family:inherit;
+    width:120px;
+  }
+  .period-pill input::-webkit-calendar-picker-indicator{filter:invert(1); cursor:pointer;}
+
+  /* STAT CARDS */
+  .stats{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:16px;}
+  .stat-card{
+    background:var(--card); border-radius:14px; padding:16px 18px; display:flex; align-items:center; gap:14px;
+    box-shadow:0 1px 3px rgba(20,30,60,0.06); border:1px solid var(--border);
+  }
+  .stat-icon{
+    width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:20px; flex-shrink:0; color:#fff;
+  }
+  .stat-icon.blue{background:#2f6fed;}
+  .stat-icon.green{background:#1aa052;}
+  .stat-icon.orange{background:#f5a623;}
+  .stat-icon.darkblue{background:#3457d5;}
+  .stat-icon.purple{background:#8e5cf0;}
+  .stat-label{font-size:12px; color:var(--muted); margin:0 0 2px;}
+  .stat-value{font-size:24px; font-weight:800; margin:0; line-height:1;}
+  .stat-sub{font-size:12px; color:var(--muted); margin:2px 0 0;}
+
+  /* MAIN GRID */
+  .main-grid{display:grid; grid-template-columns:1fr 360px; gap:16px; align-items:start;}
+  @media (max-width:1100px){ .main-grid{grid-template-columns:1fr;} .stats{grid-template-columns:repeat(2,1fr);} }
+
+  .panel{background:var(--card); border-radius:14px; border:1px solid var(--border); box-shadow:0 1px 3px rgba(20,30,60,0.06); overflow:hidden;}
+  .panel-header{
+    background:var(--navy); color:#fff; padding:12px 18px; font-weight:700; font-size:14px;
+    display:flex; align-items:center; gap:8px; letter-spacing:0.5px;
+  }
+  .panel-body{padding:16px;}
+
+  /* TABLE / GANTT */
+  .table-scroll{overflow-x:auto;}
+  table.gantt{border-collapse:collapse; width:100%; font-size:12.5px; min-width:1000px;}
+  table.gantt th, table.gantt td{border:1px solid var(--border); padding:6px 8px; vertical-align:middle;}
+  table.gantt thead th{background:var(--navy); color:#fff; font-weight:700; text-align:center; position:sticky; top:0;}
+  table.gantt .col-no{width:34px; text-align:center; font-weight:700; color:var(--muted);}
+  table.gantt .col-subject{min-width:230px; font-weight:600;}
+  table.gantt .col-pic{width:65px; text-align:center;}
+  table.gantt .col-pct{width:110px;}
+  table.gantt .week-cell{width:26px; padding:0; text-align:center; font-size:10px; color:var(--muted); background:#f8f9fc;}
+  table.gantt .month-head{background:var(--navy-2); color:#fff; text-align:center; font-size:11px; font-weight:700;}
+  table.gantt tbody tr:nth-child(even){background:#fafbfd;}
+  table.gantt tbody tr:hover{background:#eef3ff;}
+
+  .gantt-bar-cell{position:relative; height:22px; padding:0 !important;}
+  .gantt-bar{
+    position:absolute; top:4px; height:7px; border-radius:4px;
+  }
+  .bar-plan{background:var(--orange); opacity:0.85;}
+  .bar-actual{background:var(--green); top:13px;}
+
+  .progress-track{
+    background:#e6e9f0; border-radius:999px; height:8px; width:100%; overflow:hidden; position:relative;
+  }
+  .progress-fill{height:100%; border-radius:999px; transition:width .3s;}
+  .progress-text{font-size:11px; font-weight:700; margin-left:6px;}
+
+  .actions{display:flex; gap:4px; justify-content:center;}
+  .icon-btn{
+    border:none; background:#eef1f6; width:26px; height:26px; border-radius:6px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted);
+  }
+  .icon-btn:hover{background:#dfe5ee; color:var(--text);}
+  .icon-btn.danger:hover{background:#fde8e8; color:#d9362f;}
+
+  .pic-tag{
+    display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; color:#fff;
+  }
+
+  /* SIDEBAR */
+  .summary-row{display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px;}
+  .summary-row:last-child{border-bottom:none;}
+  .summary-icon{font-size:16px; width:22px; text-align:center; color:var(--blue); flex-shrink:0; margin-top:1px;}
+  .summary-label{color:var(--muted); font-size:11.5px; margin:0;}
+  .summary-value{font-weight:700; margin:1px 0 0; font-size:13px;}
+  .status-badge{display:inline-block; padding:2px 10px; border-radius:6px; font-size:11px; font-weight:800; color:#fff;}
+
+  .donut-wrap{display:flex; align-items:center; gap:18px; padding:6px 0 0;}
+  .donut-legend{font-size:12.5px;}
+  .legend-item{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .legend-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+  .legend-item b{font-size:13px;}
+
+  /* MILESTONES */
+  .milestones{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; padding:16px;}
+  @media (max-width:1100px){.milestones{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.milestones{grid-template-columns:1fr;}}
+  .milestone{
+    border:1px solid var(--border); border-radius:12px; padding:14px; position:relative;
+  }
+  .milestone .m-icon{
+    width:34px;height:34px;border-radius:8px;background:#eef1f6;display:flex;align-items:center;justify-content:center;
+    font-size:16px; margin-bottom:8px;
+  }
+  .milestone h4{margin:0 0 4px; font-size:13.5px;}
+  .milestone .m-date{font-size:11px; color:var(--muted); margin:0 0 8px;}
+  .milestone p.m-desc{font-size:11.5px; color:var(--muted); margin:0 0 10px; line-height:1.4; min-height:48px;}
+
+  /* CONTROLS */
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;}
+  .btn{
+    border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-primary{background:var(--blue); color:#fff;}
+  .btn-primary:hover{background:#2459cc;}
+  .btn-ghost{background:#fff; color:var(--navy); border:1px solid var(--border);}
+  .btn-ghost:hover{background:#f3f5fa;}
+  .btn-export{background:var(--green); color:#fff;}
+  .btn-export:hover{background:#168a45;}
+  .spacer{flex:1;}
+
+  /* MODAL */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(13,27,66,0.45); display:flex; align-items:center; justify-content:center;
+    z-index:100; padding:16px;
+  }
+  .modal{
+    background:#fff; border-radius:14px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto;
+    padding:22px 24px;
+  }
+  .modal h3{margin:0 0 16px; font-size:17px; color:var(--navy);}
+  .form-row{margin-bottom:12px;}
+  .form-row label{display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;}
+  .form-row input, .form-row select, .form-row textarea{
+    width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit;
+  }
+  .form-grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:16px;}
+
+  .footer-note{
+    background:var(--navy); color:#cfd6ec; border-radius:12px; padding:12px 18px; font-size:12px;
+    display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:8px;
+  }
+
+  .week-input-cell input[type="date"]{font-size:11px; padding:2px; width:90px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ---------- Helpers ---------- */
+const STORAGE_KEY = "project_tracker_data_v1";
+
+const PIC_COLORS = {
+  "Ade":"#2f6fed", "Ibnu":"#1aa052", "Adji":"#f5a623", "Fajar":"#8e5cf0",
+  "Arifin":"#e0556f", "Aji":"#17a2b8", "Tim":"#6c757d"
+};
+function picColor(pic){
+  if(PIC_COLORS[pic]) return PIC_COLORS[pic];
+  // hash fallback
+  let h = 0; for(let i=0;i<pic.length;i++){ h = pic.charCodeAt(i) + ((h<<5)-h); }
+  const colors = ["#2f6fed","#1aa052","#f5a623","#8e5cf0","#e0556f","#17a2b8","#d9534f","#5b6abf"];
+  return colors[Math.abs(h)%colors.length];
+}
+
+const STATUS_OPTS = [
+  {v:"planned", label:"Planned", color:"#9aa3b8"},
+  {v:"in_progress", label:"In Progress", color:"#f5a623"},
+  {v:"completed", label:"Completed", color:"#1aa052"},
+];
+function statusInfo(s){ return STATUS_OPTS.find(o=>o.v===s) || STATUS_OPTS[0]; }
+
+const ICON_OPTS = ["📋","🔥","⚙️","💡","📝","💰","❌","🔧","🌡️","🏗️","✅","📑","🌀","🔄","📦","🛠️","📊","✍️"];
+
+function toDate(str){ return new Date(str+"T00:00:00"); }
+function fmtDate(d){
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return `${yyyy}-${mm}-${dd}`;
+}
+function fmtDateLong(str){
+  if(!str) return "";
+  const d = toDate(str);
+  const months = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+function diffDays(a,b){
+  return Math.round((toDate(b) - toDate(a)) / 86400000);
+}
+function addDays(str, n){
+  const d = toDate(str); d.setDate(d.getDate()+n); return fmtDate(d);
+}
+
+/* Generate week columns between project start/end (grouped by month) */
+function buildWeeks(startStr, endStr){
+  const start = toDate(startStr);
+  const end = toDate(endStr);
+  // align to Monday of start week
+  let cur = new Date(start);
+  const dow = cur.getDay(); // 0 sun..6 sat
+  const offset = dow === 0 ? -6 : 1 - dow; // move to Monday
+  cur.setDate(cur.getDate()+offset);
+
+  const weeks = [];
+  let wIdx = 1;
+  let lastMonth = -1;
+  while(cur <= end || weeks.length === 0 || cur <= end){
+    if(cur > end && weeks.length>0) break;
+    const m = cur.getMonth();
+    if(m !== lastMonth){ wIdx = 1; lastMonth = m; }
+    weeks.push({
+      start: fmtDate(cur),
+      end: fmtDate(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+6)),
+      label: "W"+wIdx,
+      month: cur.getMonth(),
+      year: cur.getFullYear(),
+    });
+    wIdx++;
+    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+7);
+    if(weeks.length > 60) break; // safety
+  }
+  return weeks;
+}
+
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+
+/* ---------- Default Data ---------- */
+const DEFAULT_PROJECT = {
+  projectName: "Survei dan Peningkatan Sistem Ventilasi",
+  startDate: "2026-04-29",
+  endDate: "2026-10-02",
+};
+
+const DEFAULT_ACTIVITIES = [
+  {id:1, no:1, icon:"👥", subject:"Koordinasi Tim GA dengan User Produksi Export", pic:"Ade", planStart:"2026-04-29", planEnd:"2026-05-05", actualStart:"2026-04-29", actualEnd:"2026-05-04", progress:100},
+  {id:2, no:2, icon:"🔥", subject:"Survei titik panas, sumber panas, dan sirkulasi udara", pic:"Ade", planStart:"2026-04-29", planEnd:"2026-05-12", actualStart:"2026-04-29", actualEnd:"2026-05-11", progress:100},
+  {id:3, no:3, icon:"💡", subject:"Survei ventilasi eksisting/viber dan potensi pemasangan turbine ventilator", pic:"Ade", planStart:"2026-05-04", planEnd:"2026-05-19", actualStart:"2026-05-04", actualEnd:"2026-05-18", progress:100},
+  {id:4, no:4, icon:"💡", subject:"Survei penggunaan lampu dan kebutuhan pencahayaan", pic:"Ibnu", planStart:"2026-05-04", planEnd:"2026-05-19", actualStart:"2026-05-04", actualEnd:"2026-05-18", progress:100},
+  {id:5, no:5, icon:"📝", subject:"Analisa hasil survei dan penyusunan rencana perbaikan", pic:"Adji", planStart:"2026-05-11", planEnd:"2026-05-26", actualStart:"2026-05-11", actualEnd:"2026-05-25", progress:100},
+  {id:6, no:6, icon:"💰", subject:"Penyusunan proposal dan RAB perbaikan lingkungan kerja", pic:"Fajar", planStart:"2026-05-18", planEnd:"2026-06-02", actualStart:"2026-05-18", actualEnd:"2026-06-01", progress:100},
+  {id:7, no:7, icon:"❌", subject:"Pelepasan viber pada area Produksi Export", pic:"Aji", planStart:"2026-05-18", planEnd:"2026-06-02", actualStart:"2026-05-18", actualEnd:"2026-06-01", progress:100},
+  {id:8, no:8, icon:"🔧", subject:"Modifikasi saklar lampu berdasarkan kebutuhan area kerja", pic:"Fajar", planStart:"2026-05-25", planEnd:"2026-06-09", actualStart:"2026-05-25", actualEnd:"2026-06-08", progress:100},
+  {id:9, no:9, icon:"🌡️", subject:"Monitoring kondisi suhu pasca quick improvement W1", pic:"Arifin", planStart:"2026-06-08", planEnd:"2026-06-15", actualStart:"2026-06-08", actualEnd:"2026-06-14", progress:100},
+  {id:10, no:10, icon:"🌡️", subject:"Monitoring kondisi suhu pasca quick improvement W2", pic:"Arifin", planStart:"2026-06-15", planEnd:"2026-06-22", actualStart:"2026-06-15", actualEnd:null, progress:50},
+  {id:11, no:11, icon:"🌡️", subject:"Monitoring kondisi suhu pasca quick improvement W3", pic:"Arifin", planStart:"2026-06-22", planEnd:"2026-06-29", actualStart:null, actualEnd:null, progress:0},
+  {id:12, no:12, icon:"🌡️", subject:"Monitoring kondisi suhu pasca quick improvement W4", pic:"Arifin", planStart:"2026-06-29", planEnd:"2026-07-06", actualStart:null, actualEnd:null, progress:0},
+  {id:13, no:13, icon:"🏗️", subject:"Proses pengecekan suhu berdasarkan tinggi gedung", pic:"Arifin", planStart:"2026-07-06", planEnd:"2026-07-20", actualStart:null, actualEnd:null, progress:0},
+  {id:14, no:14, icon:"✅", subject:"Evaluasi efektivitas perbaikan bersama User Produksi", pic:"Ade", planStart:"2026-07-20", planEnd:"2026-08-03", actualStart:null, actualEnd:null, progress:0},
+  {id:15, no:15, icon:"📑", subject:"Penyusunan proposal dan RAB penambahan turbine ventilator", pic:"Ade", planStart:"2026-08-03", planEnd:"2026-08-17", actualStart:null, actualEnd:null, progress:0},
+  {id:16, no:16, icon:"🌀", subject:"Presentasi dan pengajuan proposal kepada manajemen", pic:"Ade", planStart:"2026-08-17", planEnd:"2026-08-31", actualStart:null, actualEnd:null, progress:0},
+  {id:17, no:17, icon:"🔄", subject:"Pelaksanaan pemasangan turbine ventilator", pic:"Ade", planStart:"2026-08-31", planEnd:"2026-09-14", actualStart:null, actualEnd:null, progress:0},
+  {id:18, no:18, icon:"📦", subject:"Evaluasi kondisi suhu pasca pemasangan turbine ventilator", pic:"Arifin", planStart:"2026-09-14", planEnd:"2026-09-28", actualStart:null, actualEnd:null, progress:0},
+  {id:19, no:19, icon:"✍️", subject:"Penyusunan laporan akhir dan dokumentasi before after", pic:"Ade", planStart:"2026-09-28", planEnd:"2026-10-02", actualStart:null, actualEnd:null, progress:0},
+];
+
+const DEFAULT_MILESTONES = [
+  {id:1, icon:"🤝", title:"Koordinasi & Survei", date:"29 Apr – 12 Mei 2026", desc:"Koordinasi tim & pelaksanaan survei awal kondisi sistem ventilasi dan lingkungan kerja", status:"completed"},
+  {id:2, icon:"📋", title:"Analisa & Perencanaan", date:"15 – 22 Mei 2026", desc:"Analisa hasil survei dan penyusunan rencana perbaikan serta proposal awal", status:"completed"},
+  {id:3, icon:"🛠️", title:"Persiapan & Quick Improvement", date:"14 Mei – 17 Jun 2026", desc:"Modifikasi, pelepasan viber, dan monitoring kondisi suhu (pasca quick improvement)", status:"completed"},
+  {id:4, icon:"🌀", title:"Pemasangan Turbine Ventilator", date:"03 Agu – 30 Sep 2026", desc:"Pelaksanaan pemasangan turbine ventilator dan evaluasi pasca pemasangan", status:"in_progress"},
+  {id:5, icon:"📑", title:"Laporan Akhir", date:"28 Sep – 02 Okt 2026", desc:"Penyusunan laporan akhir dan dokumentasi before after proyek", status:"planned"},
+];
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { project: DEFAULT_PROJECT, activities: DEFAULT_ACTIVITIES, milestones: DEFAULT_MILESTONES };
+}
+
+/* ---------- Activity Modal ---------- */
+function ActivityModal({ activity, onSave, onClose, picList }){
+  const isNew = !activity;
+  const [form, setForm] = useState(activity ? {...activity} : {
+    icon:"📋", subject:"", pic: picList[0] || "Ade",
+    planStart:"", planEnd:"", actualStart:"", actualEnd:"", progress:0
+  });
+
+  function update(field, val){ setForm(f=>({...f, [field]:val})); }
+
+  function submit(){
+    if(!form.subject.trim() || !form.planStart || !form.planEnd){
+      alert("Subject, tanggal mulai dan selesai (Plan) wajib diisi.");
+      return;
+    }
+    onSave({
+      ...form,
+      progress: Math.max(0, Math.min(100, Number(form.progress)||0)),
+      actualStart: form.actualStart || null,
+      actualEnd: form.actualEnd || null,
+    });
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="modal">
+        <h3>{isNew ? "Tambah Aktivitas" : "Edit Aktivitas"}</h3>
+
+        <div className="form-row">
+          <label>Subject / Nama Aktivitas</label>
+          <input type="text" value={form.subject} onChange={e=>update("subject", e.target.value)} placeholder="Contoh: Survei kondisi instalasi listrik" />
+        </div>
+
+        <div className="form-grid2">
+          <div className="form-row">
+            <label>Icon</label>
+            <select value={form.icon} onChange={e=>update("icon", e.target.value)}>
+              {ICON_OPTS.map(ic=> <option key={ic} value={ic}>{ic}</option>)}
+            </select>
+          </div>
+          <div className="form-row">
+            <label>PIC</label>
+            <input type="text" value={form.pic} onChange={e=>update("pic", e.target.value)} placeholder="Nama PIC" />
+          </div>
+        </div>
+
+        <div className="form-grid2">
+          <div className="form-row">
+            <label>Plan Mulai</label>
+            <input type="date" value={form.planStart} onChange={e=>update("planStart", e.target.value)} />
+          </div>
+          <div className="form-row">
+            <label>Plan Selesai</label>
+            <input type="date" value={form.planEnd} onChange={e=>update("planEnd", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="form-grid2">
+          <div className="form-row">
+            <label>Aktual Mulai (kosongkan jika belum)</label>
+            <input type="date" value={form.actualStart || ""} onChange={e=>update("actualStart", e.target.value)} />
+          </div>
+          <div className="form-row">
+            <label>Aktual Selesai (kosongkan jika belum)</label>
+            <input type="date" value={form.actualEnd || ""} onChange={e=>update("actualEnd", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <label>Progress (%) — 0 = Planned, 1-99 = In Progress, 100 = Completed</label>
+          <input type="number" min="0" max="100" value={form.progress} onChange={e=>update("progress", e.target.value)} />
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={onClose}>Batal</button>
+          <button className="btn btn-primary" onClick={submit}>{isNew ? "Tambah" : "Simpan"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Project Settings Modal ---------- */
+function ProjectModal({ project, onSave, onClose }){
+  const [form, setForm] = useState({...project});
+  return (
+    <div className="modal-overlay" onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="modal">
+        <h3>Pengaturan Proyek</h3>
+        <div className="form-row">
+          <label>Nama Proyek</label>
+          <input type="text" value={form.projectName} onChange={e=>setForm(f=>({...f, projectName:e.target.value}))} />
+        </div>
+        <div className="form-grid2">
+          <div className="form-row">
+            <label>Tanggal Mulai Proyek</label>
+            <input type="date" value={form.startDate} onChange={e=>setForm(f=>({...f, startDate:e.target.value}))} />
+          </div>
+          <div className="form-row">
+            <label>Tanggal Akhir Proyek</label>
+            <input type="date" value={form.endDate} onChange={e=>setForm(f=>({...f, endDate:e.target.value}))} />
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={onClose}>Batal</button>
+          <button className="btn btn-primary" onClick={()=>onSave(form)}>Simpan</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Donut Chart (SVG) ---------- */
+function DonutChart({ completed, inProgress, planned, total, overall }){
+  const data = [
+    {label:"Completed", value:completed, color:"#1aa052"},
+    {label:"In Progress", value:inProgress, color:"#f5a623"},
+    {label:"Planned", value:planned, color:"#2f6fed"},
+  ];
+  const r = 60, cx=70, cy=70, stroke=22;
+  const circ = 2*Math.PI*r;
+  let offsetAcc = 0;
+
+  return (
+    <div className="donut-wrap">
+      <div style={{position:"relative", width:140, height:140, flexShrink:0}}>
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#eef1f6" strokeWidth={stroke} />
+          {data.map((d,i)=>{
+            const frac = total>0 ? d.value/total : 0;
+            const len = frac*circ;
+            const dash = `${len} ${circ-len}`;
+            const rotate = (offsetAcc/total)*360 - 90;
+            offsetAcc += d.value;
+            return (
+              <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={d.color} strokeWidth={stroke}
+                strokeDasharray={dash} strokeDashoffset="0"
+                transform={`rotate(${rotate} ${cx} ${cy})`} strokeLinecap="butt" />
+            );
+          })}
+        </svg>
+        <div style={{position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column"}}>
+          <div style={{fontSize:24, fontWeight:800, color:"var(--navy)"}}>{overall}%</div>
+          <div style={{fontSize:10, color:"var(--muted)"}}>Overall Progress</div>
+        </div>
+      </div>
+      <div className="donut-legend">
+        {data.map((d,i)=>{
+          const pct = total>0 ? ((d.value/total)*100).toFixed(1) : "0.0";
+          return (
+            <div className="legend-item" key={i}>
+              <span className="legend-dot" style={{background:d.color}}></span>
+              <span>{d.label}<br/><b>{d.value} ({pct}%)</b></span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Main App ---------- */
+function App(){
+  const [data, setData] = useState(loadData());
+  const [editingActivity, setEditingActivity] = useState(undefined); // undefined=closed, null=new, obj=edit
+  const [editingProject, setEditingProject] = useState(false);
+
+  useEffect(()=>{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
+
+  const { project, activities, milestones } = data;
+
+  const picList = useMemo(()=>{
+    const set = new Set(activities.map(a=>a.pic).filter(Boolean));
+    return Array.from(set);
+  }, [activities]);
+
+  const weeks = useMemo(()=>buildWeeks(project.startDate, project.endDate), [project.startDate, project.endDate]);
+
+  // group weeks by month for header
+  const monthGroups = useMemo(()=>{
+    const groups = [];
+    weeks.forEach(w=>{
+      const last = groups[groups.length-1];
+      if(last && last.month===w.month && last.year===w.year){ last.count++; }
+      else groups.push({month:w.month, year:w.year, count:1});
+    });
+    return groups;
+  }, [weeks]);
+
+  const totalDays = diffDays(project.startDate, project.endDate) + 1;
+  const totalWidth = weeks.length * 26; // px per week column
+
+  function activityStatus(a){
+    if(a.progress >= 100) return "completed";
+    if(a.progress > 0) return "in_progress";
+    return "planned";
+  }
+
+  const completedCount = activities.filter(a=>activityStatus(a)==="completed").length;
+  const inProgressCount = activities.filter(a=>activityStatus(a)==="in_progress").length;
+  const plannedCount = activities.filter(a=>activityStatus(a)==="planned").length;
+  const total = activities.length;
+  const overallProgress = total>0 ? Math.round(activities.reduce((s,a)=>s+(Number(a.progress)||0),0)/total) : 0;
+
+  let projectStatus = "PLANNED";
+  if(overallProgress >= 100) projectStatus = "COMPLETED";
+  else if(overallProgress > 0) projectStatus = "IN PROGRESS";
+
+  const statusColor = projectStatus==="COMPLETED" ? "#1aa052" : (projectStatus==="IN PROGRESS" ? "#f5a623" : "#9aa3b8");
+
+  function saveActivity(form){
+    if(editingActivity === null){
+      // new
+      const newId = Math.max(0, ...activities.map(a=>a.id)) + 1;
+      const newNo = Math.max(0, ...activities.map(a=>a.no)) + 1;
+      setData(d=>({...d, activities:[...d.activities, {...form, id:newId, no:newNo}]}));
+    } else {
+      setData(d=>({...d, activities: d.activities.map(a=> a.id===editingActivity.id ? {...form, id:a.id, no:a.no} : a)}));
+    }
+    setEditingActivity(undefined);
+  }
+
+  function deleteActivity(id){
+    if(!confirm("Hapus aktivitas ini?")) return;
+    setData(d=>{
+      const filtered = d.activities.filter(a=>a.id!==id);
+      // renumber
+      const renum = filtered.map((a,i)=>({...a, no:i+1}));
+      return {...d, activities: renum};
+    });
+  }
+
+  function saveProject(form){
+    setData(d=>({...d, project: form}));
+    setEditingProject(false);
+  }
+
+  function moveActivity(id, dir){
+    setData(d=>{
+      const arr = [...d.activities];
+      const idx = arr.findIndex(a=>a.id===id);
+      const newIdx = idx + dir;
+      if(newIdx<0 || newIdx>=arr.length) return d;
+      [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+      const renum = arr.map((a,i)=>({...a, no:i+1}));
+      return {...d, activities: renum};
+    });
+  }
+
+  function exportJSON(){
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "project_tracker_data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importJSON(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const json = JSON.parse(ev.target.result);
+        if(json.project && json.activities){
+          setData(json);
+        } else {
+          alert("Format file tidak valid.");
+        }
+      }catch(err){ alert("Gagal membaca file JSON."); }
+    };
+    reader.readAsText(file);
+  }
+
+  function resetData(){
+    if(!confirm("Reset ke data contoh awal? Semua perubahan akan hilang.")) return;
+    setData({ project: DEFAULT_PROJECT, activities: DEFAULT_ACTIVITIES, milestones: DEFAULT_MILESTONES });
+  }
+
+  // Render gantt bar position for a given date range
+  function barStyle(startStr, endStr){
+    if(!startStr || !endStr) return null;
+    const ganttStart = weeks[0].start;
+    const offsetDays = diffDays(ganttStart, startStr);
+    const lengthDays = diffDays(startStr, endStr) + 1;
+    const dayWidth = 26/7; // px per day
+    const left = offsetDays * dayWidth;
+    const width = Math.max(lengthDays * dayWidth, 4);
+    return { left: `${left}px`, width: `${width}px` };
+  }
+
+  const today = new Date();
+  const generatedDate = `${String(today.getDate()).padStart(2,'0')} ${MONTH_NAMES[today.getMonth()]} ${today.getFullYear()}`;
+
+  return (
+    <div className="wrap">
+      {/* HEADER */}
+      <div className="header">
+        <div className="header-left">
+          <div className="logo">📋</div>
+          <div>
+            <h1>PROJECT<br/>TRACKER</h1>
+          </div>
+        </div>
+        <div className="header-mid" style={{flex:1, minWidth:260}}>
+          <h2>{project.projectName || "Nama Proyek"}</h2>
+          <p>Project Tracker Dashboard</p>
+          <div className="period-pill">
+            📅 Periode:
+            <input type="date" value={project.startDate} onChange={e=>setData(d=>({...d, project:{...d.project, startDate:e.target.value}}))} />
+            –
+            <input type="date" value={project.endDate} onChange={e=>setData(d=>({...d, project:{...d.project, endDate:e.target.value}}))} />
+          </div>
+        </div>
+      </div>
+
+      {/* TOOLBAR */}
+      <div className="toolbar">
+        <button className="btn btn-primary" onClick={()=>setEditingActivity(null)}>+ Tambah Aktivitas</button>
+        <button className="btn btn-ghost" onClick={()=>setEditingProject(true)}>⚙️ Pengaturan Proyek</button>
+        <div className="spacer"></div>
+        <button className="btn btn-export" onClick={exportJSON}>⬇ Export Data</button>
+        <label className="btn btn-ghost" style={{cursor:"pointer"}}>
+          ⬆ Import Data
+          <input type="file" accept="application/json" onChange={importJSON} style={{display:"none"}} />
+        </label>
+        <button className="btn btn-ghost" onClick={resetData}>↺ Reset Contoh</button>
+      </div>
+
+      {/* STAT CARDS */}
+      <div className="stats">
+        <div className="stat-card">
+          <div className="stat-icon blue">📋</div>
+          <div>
+            <p className="stat-label">Total Activities</p>
+            <p className="stat-value">{total}</p>
+            <p className="stat-sub">Aktivitas</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon green">✓</div>
+          <div>
+            <p className="stat-label">Completed Activities</p>
+            <p className="stat-value">{completedCount}</p>
+            <p className="stat-sub">Aktivitas</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon orange">⏱</div>
+          <div>
+            <p className="stat-label">In Progress Activities</p>
+            <p className="stat-value">{inProgressCount}</p>
+            <p className="stat-sub">Aktivitas</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon darkblue">📅</div>
+          <div>
+            <p className="stat-label">Planned Activities</p>
+            <p className="stat-value">{plannedCount}</p>
+            <p className="stat-sub">Aktivitas</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon purple">👥</div>
+          <div>
+            <p className="stat-label">Total PIC Involved</p>
+            <p className="stat-value">{picList.length}</p>
+            <p className="stat-sub">PIC</p>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN GRID */}
+      <div className="main-grid">
+        {/* GANTT TABLE */}
+        <div className="panel">
+          <div className="panel-header">
+            🗓 GANTT CHART — <span style={{display:"inline-flex", alignItems:"center", gap:14, marginLeft:8, fontWeight:500, fontSize:12}}>
+              <span><span style={{display:"inline-block",width:14,height:7,background:"var(--orange)",borderRadius:3,marginRight:4}}></span>Plan (P) - Rencana</span>
+              <span><span style={{display:"inline-block",width:14,height:7,background:"var(--green)",borderRadius:3,marginRight:4}}></span>Actual (A) - Pelaksanaan</span>
+            </span>
+          </div>
+          <div className="table-scroll">
+            <table className="gantt">
+              <thead>
+                <tr>
+                  <th className="col-no" rowSpan="2">No</th>
+                  <th className="col-subject" rowSpan="2">Subject</th>
+                  <th className="col-pic" rowSpan="2">PIC</th>
+                  {monthGroups.map((g,i)=>(
+                    <th key={i} className="month-head" colSpan={g.count}>{MONTH_NAMES[g.month]} '{String(g.year).slice(2)}</th>
+                  ))}
+                  <th className="col-pct" rowSpan="2">Presentase</th>
+                  <th rowSpan="2" style={{width:70}}>Aksi</th>
+                </tr>
+                <tr>
+                  {weeks.map((w,i)=>(
+                    <th key={i} className="week-cell">{w.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {activities.map((a, idx)=>{
+                  const st = activityStatus(a);
+                  const sInfo = statusInfo(st);
+                  const planBar = barStyle(a.planStart, a.planEnd);
+                  const actualBar = a.actualStart ? barStyle(a.actualStart, a.actualEnd || fmtDate(new Date())) : null;
+                  return (
+                    <tr key={a.id}>
+                      <td className="col-no">{a.no}</td>
+                      <td className="col-subject">{a.icon} {a.subject}</td>
+                      <td className="col-pic"><span className="pic-tag" style={{background:picColor(a.pic)}}>{a.pic}</span></td>
+                      <td className="gantt-bar-cell" colSpan={weeks.length} style={{position:"relative"}}>
+                        <div style={{position:"relative", height:"100%", minWidth: totalWidth}}>
+                          {planBar && <div className="gantt-bar bar-plan" style={planBar} title={`Plan: ${fmtDateLong(a.planStart)} - ${fmtDateLong(a.planEnd)}`}></div>}
+                          {actualBar && <div className="gantt-bar bar-actual" style={actualBar} title={`Actual: ${fmtDateLong(a.actualStart)}${a.actualEnd ? ' - '+fmtDateLong(a.actualEnd) : ' - berjalan'}`}></div>}
+                        </div>
+                      </td>
+                      <td className="col-pct">
+                        <div style={{display:"flex", alignItems:"center"}}>
+                          <div className="progress-track">
+                            <div className="progress-fill" style={{width:`${a.progress}%`, background:sInfo.color}}></div>
+                          </div>
+                          <span className="progress-text" style={{color:sInfo.color}}>{a.progress}%</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="actions">
+                          <button className="icon-btn" title="Naik" onClick={()=>moveActivity(a.id,-1)}>↑</button>
+                          <button className="icon-btn" title="Turun" onClick={()=>moveActivity(a.id,1)}>↓</button>
+                          <button className="icon-btn" title="Edit" onClick={()=>setEditingActivity(a)}>✎</button>
+                          <button className="icon-btn danger" title="Hapus" onClick={()=>deleteActivity(a.id)}>🗑</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {activities.length===0 && (
+                  <tr><td colSpan={weeks.length+5} style={{textAlign:"center", padding:24, color:"var(--muted)"}}>Belum ada aktivitas. Klik "+ Tambah Aktivitas" untuk mulai.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* SIDEBAR */}
+        <div style={{display:"flex", flexDirection:"column", gap:16}}>
+          <div className="panel">
+            <div className="panel-header">📋 PROJECT SUMMARY</div>
+            <div className="panel-body">
+              <div className="summary-row">
+                <div className="summary-icon">📌</div>
+                <div><p className="summary-label">Project Name</p><p className="summary-value">{project.projectName}</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">📅</div>
+                <div><p className="summary-label">Project Period</p><p className="summary-value">{fmtDateLong(project.startDate)} – {fmtDateLong(project.endDate)}</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">⏳</div>
+                <div><p className="summary-label">Total Duration</p><p className="summary-value">{totalDays} Days</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">📈</div>
+                <div><p className="summary-label">Project Status</p><p className="summary-value"><span className="status-badge" style={{background:statusColor}}>{projectStatus}</span></p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">🔄</div>
+                <div><p className="summary-label">Overall Progress</p><p className="summary-value">{overallProgress}%</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">📊</div>
+                <div><p className="summary-label">Total Activities</p><p className="summary-value">{total} Aktivitas</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">✅</div>
+                <div><p className="summary-label">Completed Activities</p><p className="summary-value">{completedCount} Aktivitas ({total>0?Math.round(completedCount/total*100):0}%)</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">⏱</div>
+                <div><p className="summary-label">In Progress Activities</p><p className="summary-value">{inProgressCount} Aktivitas ({total>0?Math.round(inProgressCount/total*100):0}%)</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">📅</div>
+                <div><p className="summary-label">Planned Activities</p><p className="summary-value">{plannedCount} Aktivitas ({total>0?Math.round(plannedCount/total*100):0}%)</p></div>
+              </div>
+              <div className="summary-row">
+                <div className="summary-icon">👥</div>
+                <div><p className="summary-label">Total PIC Involved</p><p className="summary-value">{picList.join(", ") || "-"}</p></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header">🥧 PROGRESS DISTRIBUTION</div>
+            <div className="panel-body">
+              <DonutChart completed={completedCount} inProgress={inProgressCount} planned={plannedCount} total={total} overall={overallProgress} />
+              <p style={{textAlign:"center", marginTop:14, fontWeight:700, fontSize:13}}>Total Activities: {total}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* MILESTONES */}
+      <div className="panel" style={{marginTop:16}}>
+        <div className="panel-header">🏁 MILESTONE ROADMAP</div>
+        <div className="milestones">
+          {milestones.map((m,i)=>{
+            const sInfo = statusInfo(m.status);
+            return (
+              <div className="milestone" key={m.id}>
+                <div className="m-icon">{m.icon}</div>
+                <h4>{m.title}</h4>
+                <p className="m-date">{m.date}</p>
+                <p className="m-desc">{m.desc}</p>
+                <span className="status-badge" style={{background:sInfo.color}}>{sInfo.label.toUpperCase()}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div className="footer-note">
+        <span>📝 Catatan: Data berdasarkan rencana (Plan) dan realisasi (Actual) per tanggal laporan. Semua data disimpan otomatis di browser (localStorage).</span>
+        <span>📅 Dashboard Generated: {generatedDate}</span>
+      </div>
+
+      {/* MODALS */}
+      {editingActivity !== undefined && (
+        <ActivityModal
+          activity={editingActivity}
+          picList={picList}
+          onSave={saveActivity}
+          onClose={()=>setEditingActivity(undefined)}
+        />
+      )}
+      {editingProject && (
+        <ProjectModal project={project} onSave={saveProject} onClose={()=>setEditingProject(false)} />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
