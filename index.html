@@ -87,7 +87,7 @@
   table.gantt .col-subject{min-width:230px; font-weight:600;}
   table.gantt .col-pic{width:65px; text-align:center;}
   table.gantt .col-pct{width:110px;}
-  table.gantt .week-cell{width:26px; padding:0; text-align:center; font-size:10px; color:var(--muted); background:#f8f9fc;}
+  table.gantt .week-cell{width:22px; min-width:22px; padding:0; text-align:center; font-size:10px; color:var(--muted); background:#f8f9fc;}
   table.gantt .month-head{background:var(--navy-2); color:#fff; text-align:center; font-size:11px; font-weight:700;}
   table.gantt tbody tr:nth-child(even){background:#fafbfd;}
   table.gantt tbody tr:hover{background:#eef3ff;}
@@ -241,35 +241,24 @@ function addDays(str, n){
   const d = toDate(str); d.setDate(d.getDate()+n); return fmtDate(d);
 }
 
-/* Generate week columns between project start/end (grouped by month) */
-function buildWeeks(startStr, endStr){
+/* Generate daily columns between project start/end (grouped by month) */
+function buildDays(startStr, endStr){
   const start = toDate(startStr);
   const end = toDate(endStr);
-  // align to Monday of start week
+  const days = [];
   let cur = new Date(start);
-  const dow = cur.getDay(); // 0 sun..6 sat
-  const offset = dow === 0 ? -6 : 1 - dow; // move to Monday
-  cur.setDate(cur.getDate()+offset);
-
-  const weeks = [];
-  let wIdx = 1;
-  let lastMonth = -1;
-  while(cur <= end || weeks.length === 0 || cur <= end){
-    if(cur > end && weeks.length>0) break;
-    const m = cur.getMonth();
-    if(m !== lastMonth){ wIdx = 1; lastMonth = m; }
-    weeks.push({
-      start: fmtDate(cur),
-      end: fmtDate(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+6)),
-      label: "W"+wIdx,
+  while(cur <= end){
+    days.push({
+      date: fmtDate(cur),
+      day: cur.getDate(),
       month: cur.getMonth(),
       year: cur.getFullYear(),
+      dow: cur.getDay(), // 0 = Sunday, 6 = Saturday
     });
-    wIdx++;
-    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+7);
-    if(weeks.length > 60) break; // safety
+    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1);
+    if(days.length > 400) break; // safety
   }
-  return weeks;
+  return days;
 }
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
@@ -559,21 +548,22 @@ function App(){
     return Array.from(set);
   }, [activities]);
 
-  const weeks = useMemo(()=>buildWeeks(project.startDate, project.endDate), [project.startDate, project.endDate]);
+  const days = useMemo(()=>buildDays(project.startDate, project.endDate), [project.startDate, project.endDate]);
+  const DAY_WIDTH = 22; // px per day column
 
-  // group weeks by month for header
+  // group days by month for header
   const monthGroups = useMemo(()=>{
     const groups = [];
-    weeks.forEach(w=>{
+    days.forEach(d=>{
       const last = groups[groups.length-1];
-      if(last && last.month===w.month && last.year===w.year){ last.count++; }
-      else groups.push({month:w.month, year:w.year, count:1});
+      if(last && last.month===d.month && last.year===d.year){ last.count++; }
+      else groups.push({month:d.month, year:d.year, count:1});
     });
     return groups;
-  }, [weeks]);
+  }, [days]);
 
   const totalDays = diffDays(project.startDate, project.endDate) + 1;
-  const totalWidth = weeks.length * 26; // px per week column
+  const totalWidth = days.length * DAY_WIDTH;
 
   function activityStatus(a){
     if(a.progress >= 100) return "completed";
@@ -692,12 +682,11 @@ function App(){
   // Render gantt bar position for a given date range
   function barStyle(startStr, endStr){
     if(!startStr || !endStr) return null;
-    const ganttStart = weeks[0].start;
+    const ganttStart = days[0].date;
     const offsetDays = diffDays(ganttStart, startStr);
     const lengthDays = diffDays(startStr, endStr) + 1;
-    const dayWidth = 26/7; // px per day
-    const left = offsetDays * dayWidth;
-    const width = Math.max(lengthDays * dayWidth, 4);
+    const left = offsetDays * DAY_WIDTH;
+    const width = Math.max(lengthDays * DAY_WIDTH - 2, 4);
     return { left: `${left}px`, width: `${width}px` };
   }
 
@@ -807,8 +796,8 @@ function App(){
                   <th rowSpan="2" style={{width:70}}>Aksi</th>
                 </tr>
                 <tr>
-                  {weeks.map((w,i)=>(
-                    <th key={i} className="week-cell">{w.label}</th>
+                  {days.map((d,i)=>(
+                    <th key={i} className="week-cell" style={d.dow===0||d.dow===6 ? {background:"#eef1f6", color:"#b0b6c4"} : undefined}>{d.day}</th>
                   ))}
                 </tr>
               </thead>
@@ -823,7 +812,7 @@ function App(){
                       <td className="col-no">{a.no}</td>
                       <td className="col-subject">{a.icon} {a.subject}</td>
                       <td className="col-pic"><span className="pic-tag" style={{background:picColor(a.pic)}}>{a.pic}</span></td>
-                      <td className="gantt-bar-cell" colSpan={weeks.length} style={{position:"relative"}}>
+                      <td className="gantt-bar-cell" colSpan={days.length} style={{position:"relative"}}>
                         <div style={{position:"relative", height:"100%", minWidth: totalWidth}}>
                           {planBar && <div className="gantt-bar bar-plan" style={planBar} title={`Plan: ${fmtDateLong(a.planStart)} - ${fmtDateLong(a.planEnd)}`}></div>}
                           {actualBar && <div className="gantt-bar bar-actual" style={actualBar} title={`Actual: ${fmtDateLong(a.actualStart)}${a.actualEnd ? ' - '+fmtDateLong(a.actualEnd) : ' - berjalan'}`}></div>}
@@ -849,7 +838,7 @@ function App(){
                   );
                 })}
                 {activities.length===0 && (
-                  <tr><td colSpan={weeks.length+5} style={{textAlign:"center", padding:24, color:"var(--muted)"}}>Belum ada aktivitas. Klik "+ Tambah Aktivitas" untuk mulai.</td></tr>
+                  <tr><td colSpan={days.length+5} style={{textAlign:"center", padding:24, color:"var(--muted)"}}>Belum ada aktivitas. Klik "+ Tambah Aktivitas" untuk mulai.</td></tr>
                 )}
               </tbody>
             </table>
