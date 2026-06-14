@@ -219,6 +219,7 @@ const STATUS_OPTS = [
 function statusInfo(s){ return STATUS_OPTS.find(o=>o.v===s) || STATUS_OPTS[0]; }
 
 const ICON_OPTS = ["📋","🔥","⚙️","💡","📝","💰","❌","🔧","🌡️","🏗️","✅","📑","🌀","🔄","📦","🛠️","📊","✍️"];
+const MILESTONE_ICON_OPTS = ["🤝","📋","🛠️","🌀","📑","🏁","🚀","🔍","⚙️","✅","📦","🌡️","💡","🔧","📊","✍️"];
 
 function toDate(str){ return new Date(str+"T00:00:00"); }
 function fmtDate(d){
@@ -430,6 +431,67 @@ function ProjectModal({ project, onSave, onClose }){
   );
 }
 
+/* ---------- Milestone Modal ---------- */
+function MilestoneModal({ milestone, onSave, onClose }){
+  const isNew = !milestone;
+  const [form, setForm] = useState(milestone ? {...milestone} : {
+    icon:"🏁", title:"", date:"", desc:"", status:"planned"
+  });
+
+  function update(field, val){ setForm(f=>({...f, [field]:val})); }
+
+  function submit(){
+    if(!form.title.trim()){
+      alert("Judul milestone wajib diisi.");
+      return;
+    }
+    onSave(form);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="modal">
+        <h3>{isNew ? "Tambah Milestone" : "Edit Milestone"}</h3>
+
+        <div className="form-grid2">
+          <div className="form-row">
+            <label>Icon</label>
+            <select value={form.icon} onChange={e=>update("icon", e.target.value)}>
+              {MILESTONE_ICON_OPTS.map(ic=> <option key={ic} value={ic}>{ic}</option>)}
+            </select>
+          </div>
+          <div className="form-row">
+            <label>Status</label>
+            <select value={form.status} onChange={e=>update("status", e.target.value)}>
+              {STATUS_OPTS.map(o=> <option key={o.v} value={o.v}>{o.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-row">
+          <label>Judul Milestone</label>
+          <input type="text" value={form.title} onChange={e=>update("title", e.target.value)} placeholder="Contoh: Persiapan & Quick Improvement" />
+        </div>
+
+        <div className="form-row">
+          <label>Periode (teks bebas, contoh: 14 Mei – 17 Jun 2026)</label>
+          <input type="text" value={form.date} onChange={e=>update("date", e.target.value)} placeholder="Contoh: 14 Mei – 17 Jun 2026" />
+        </div>
+
+        <div className="form-row">
+          <label>Deskripsi</label>
+          <textarea rows="3" value={form.desc} onChange={e=>update("desc", e.target.value)} placeholder="Deskripsi singkat milestone ini"></textarea>
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={onClose}>Batal</button>
+          <button className="btn btn-primary" onClick={submit}>{isNew ? "Tambah" : "Simpan"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Donut Chart (SVG) ---------- */
 function DonutChart({ completed, inProgress, planned, total, overall }){
   const data = [
@@ -484,6 +546,7 @@ function App(){
   const [data, setData] = useState(loadData());
   const [editingActivity, setEditingActivity] = useState(undefined); // undefined=closed, null=new, obj=edit
   const [editingProject, setEditingProject] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState(undefined); // undefined=closed, null=new, obj=edit
 
   useEffect(()=>{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -555,6 +618,32 @@ function App(){
   function saveProject(form){
     setData(d=>({...d, project: form}));
     setEditingProject(false);
+  }
+
+  function saveMilestone(form){
+    if(editingMilestone === null){
+      const newId = Math.max(0, ...data.milestones.map(m=>m.id)) + 1;
+      setData(d=>({...d, milestones:[...d.milestones, {...form, id:newId}]}));
+    } else {
+      setData(d=>({...d, milestones: d.milestones.map(m=> m.id===editingMilestone.id ? {...form, id:m.id} : m)}));
+    }
+    setEditingMilestone(undefined);
+  }
+
+  function deleteMilestone(id){
+    if(!confirm("Hapus milestone ini?")) return;
+    setData(d=>({...d, milestones: d.milestones.filter(m=>m.id!==id)}));
+  }
+
+  function moveMilestone(id, dir){
+    setData(d=>{
+      const arr = [...d.milestones];
+      const idx = arr.findIndex(m=>m.id===id);
+      const newIdx = idx + dir;
+      if(newIdx<0 || newIdx>=arr.length) return d;
+      [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+      return {...d, milestones: arr};
+    });
   }
 
   function moveActivity(id, dir){
@@ -827,13 +916,24 @@ function App(){
 
       {/* MILESTONES */}
       <div className="panel" style={{marginTop:16}}>
-        <div className="panel-header">🏁 MILESTONE ROADMAP</div>
+        <div className="panel-header" style={{justifyContent:"space-between"}}>
+          <span>🏁 MILESTONE ROADMAP</span>
+          <button className="btn btn-primary" style={{padding:"6px 12px", fontSize:12}} onClick={()=>setEditingMilestone(null)}>+ Tambah Milestone</button>
+        </div>
         <div className="milestones">
           {milestones.map((m,i)=>{
             const sInfo = statusInfo(m.status);
             return (
               <div className="milestone" key={m.id}>
-                <div className="m-icon">{m.icon}</div>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
+                  <div className="m-icon">{m.icon}</div>
+                  <div className="actions">
+                    <button className="icon-btn" title="Geser kiri" onClick={()=>moveMilestone(m.id,-1)}>←</button>
+                    <button className="icon-btn" title="Geser kanan" onClick={()=>moveMilestone(m.id,1)}>→</button>
+                    <button className="icon-btn" title="Edit" onClick={()=>setEditingMilestone(m)}>✎</button>
+                    <button className="icon-btn danger" title="Hapus" onClick={()=>deleteMilestone(m.id)}>🗑</button>
+                  </div>
+                </div>
                 <h4>{m.title}</h4>
                 <p className="m-date">{m.date}</p>
                 <p className="m-desc">{m.desc}</p>
@@ -841,6 +941,9 @@ function App(){
               </div>
             );
           })}
+          {milestones.length===0 && (
+            <div style={{gridColumn:"1/-1", textAlign:"center", padding:24, color:"var(--muted)"}}>Belum ada milestone. Klik "+ Tambah Milestone" untuk mulai.</div>
+          )}
         </div>
       </div>
 
@@ -861,6 +964,13 @@ function App(){
       )}
       {editingProject && (
         <ProjectModal project={project} onSave={saveProject} onClose={()=>setEditingProject(false)} />
+      )}
+      {editingMilestone !== undefined && (
+        <MilestoneModal
+          milestone={editingMilestone}
+          onSave={saveMilestone}
+          onClose={()=>setEditingMilestone(undefined)}
+        />
       )}
     </div>
   );
